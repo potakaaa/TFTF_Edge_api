@@ -9,10 +9,20 @@ app = FastAPI(title="TFTF Edge API")
 from fastapi import FastAPI, Query
 import subprocess
 import json
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
 # http://127.0.0.1:8000/api/routes?fromLat=8.50881&fromLong=124.64827&fromName=Bonbon&toLat=8.51133&toLong=124.62429&toName=Westbound Bulua Terminal&transMeter=100.50&hour=10
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Update with your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/api/routes")
 async def findRoute(
