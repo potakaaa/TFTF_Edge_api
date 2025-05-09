@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Query
 import subprocess, json
+import os
 
 app = FastAPI(title="TFTF Edge API")
 
@@ -10,6 +11,8 @@ import subprocess
 import json
 
 app = FastAPI()
+
+# http://127.0.0.1:8000/api/routes?fromLat=8.50881&fromLong=124.64827&fromName=Bonbon&toLat=8.51133&toLong=124.62429&toName=Westbound Bulua Terminal&transMeter=100.50&hour=10
 
 @app.get("/api/routes")
 async def findRoute(
@@ -23,10 +26,7 @@ async def findRoute(
     hour: int = Query(...)
 ):
     geojsonPath = "./app/routes.geojson"  # Adjust this path as needed
-    import os
     print("Current working directory:", os.getcwd())
-
-    
 
     try:
         result = subprocess.run(
@@ -37,17 +37,33 @@ async def findRoute(
             text=True
         )
         print(geojsonPath)
-        # try:
-        #     response_data = json.loads(result.stdout)
-        #     return response_data
-        # except json.JSONDecodeError as e:
-        #     return {"error": "Invalid JSON output", "stdout": result.stdout, "stderr": result.stderr}
 
         stdout_lines = result.stdout.strip().splitlines()
-        # print("Raw output:", result.stdout)  # Debugging line
+        
         for line in reversed(stdout_lines):
             try:
-                return json.loads(line)
+                response_data = json.loads(line)
+                
+                # Extract route coordinates
+                route_coordinates = []
+                if "Routes" in response_data:
+                    for route in response_data["Routes"]:
+                        if "Entry Coordinate" in route:
+                            route_coordinates.append(route["Entry Coordinate"])
+                        if "Exit Coordinate" in route:
+                            route_coordinates.append(route["Exit Coordinate"])
+                
+                # Create a new ordered response
+                ordered_response = {
+                    "From": response_data.get("From", {}),
+                    "To": response_data.get("To", {}),
+                    "Transfer Range": response_data.get("Transfer Range", 0),
+                    "Routes": response_data.get("Routes", []),
+                    "Coordinates": response_data.get("Coordinates", []),
+                    "GeoJSON": response_data.get("GeoJSON", {}),
+                }
+                
+                return ordered_response
             except json.JSONDecodeError:
                 continue
 
